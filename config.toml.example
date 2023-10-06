@@ -1,0 +1,11 @@
+# see .zuliprc from https://XXX.zulipchat.com/#settings/account-and-privacy
+# but values here must be quoted, must have slash ending site url
+[zulip]
+email="y@XXX.com"
+key="YYYYYYYYY"
+site="https://XXX.zulipchat.com/"
+
+[irc]
+user="admin"
+host="127.0.0.1"
+port="6667"
