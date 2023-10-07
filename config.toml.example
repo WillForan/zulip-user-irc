@@ -3,7 +3,7 @@
 [zulip]
 email="y@XXX.com"
 key="YYYYYYYYY"
-site="https://XXX.zulipchat.com/"
+site="https://XXX.zulipchat.com/api/v1/"
 
 [irc]
 user="admin"

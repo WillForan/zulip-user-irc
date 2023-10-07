@@ -13,12 +13,10 @@ package main
 
 import (
 	"flag"
-	"fmt"
+	//"fmt"
 	gzb "github.com/ifo/gozulipbot"
 	"github.com/pelletier/go-toml"
 	"log"
-	"math"
-	"sync/atomic"
 	"time"
 )
 
@@ -30,48 +28,46 @@ func bot_config(config *toml.Tree) gzb.Bot {
 	b.APIURL = config.Get("zulip.site").(string)
 	b.Email = config.Get("zulip.email").(string)
 	b.Backoff = 1 * time.Second
+	b.Retries = 0
 	return b
 }
 
-func connect(file string) {
+func connect_zulip(file string) {
 	config, err := toml.LoadFile(file)
 	if err != nil {
 		panic(err)
 	}
-	user := config.Get("zulip.key").(string)
-	print(user, "\n")
+	//user := config.Get("zulip.key").(string)
+	//print(user, "\n")
 	bot := bot_config(config)
+	//alt: bot.GetConfigFromEnvironment()
 
-	//bot.GetConfigFromEnvironment()
-
-	fmt.Println(bot)
 	bot.Init()
-	fmt.Println(bot)
-
-	backoffTime := time.Now().Add(bot.Backoff * time.Duration(math.Pow10(int(atomic.LoadInt64(&bot.Retries)))))
-	fmt.Println("backoff time:", backoffTime)
-
-	bot.RegisterAt()
-	q, err := bot.RegisterAt()
+	q, err := bot.RegisterAll()
 	if err != nil {
 		log.Println("register error:", err)
 	}
-
-	stopFunc := q.EventsCallback(respondToMessage)
-
-	time.Sleep(1 * time.Minute)
-	stopFunc()
-
+   // TODO: collect and return function handle(s)
+	// to execute recieveMessages not yet processed?
+	q.EventsCallback(recieveMessage)
 }
 
-func respondToMessage(em gzb.EventMessage, err error) {
+func recieveMessage(em gzb.EventMessage, err error) {
 	if err != nil {
 		log.Println("error in respond to message:", err)
 		return
 	}
 
-	log.Println("message received")
-	//log.Println(em)
+	//does not get reactions
+	//em.Content = "message"
+	//em.Timestamp = 1696694596
+	//em.Client = "website"
+	//em.SenderEmail = "foranw@upmc.edu"
+   //em.Subject = ""
+   //em.SenderID    = 642506
+	//em.Type        = "Private"
+	//fmt.Sprintf("a")
+	log.Println(em.SenderEmail,"/",em.Type,": ",em.Content)
 
 	//em.Queue.Bot.Respond(em, "hi forever!")
 }
@@ -79,6 +75,8 @@ func respondToMessage(em gzb.EventMessage, err error) {
 func main() {
 	config_file := flag.String("config", "config.toml", "[zulip] and [irc] configuration")
 	flag.Parse()
-	fmt.Println(*config_file)
-	connect(*config_file)
+	connect_zulip(*config_file)
+
+	//TODO: sleep forever?
+	time.Sleep(1 * time.Minute)
 }
