@@ -6,6 +6,7 @@ key="YYYYYYYYY"
 site="https://XXX.zulipchat.com/api/v1/"
 
 [irc]
-user="admin"
-host="127.0.0.1"
-port="6667"
+user="me"
+bot="botname"
+channel="#test"
+host="127.0.0.1:6667"
