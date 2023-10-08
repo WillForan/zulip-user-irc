@@ -18,6 +18,7 @@ import (
 	"fmt"
 	gzb "github.com/ifo/gozulipbot"
 	hbot "github.com/whyrusleeping/hellabot"
+	"regexp"
 	//log2 "gopkg.in/inconshreveable/log15.v2"
 	"github.com/pelletier/go-toml"
 	"log"
@@ -38,6 +39,8 @@ func zulip_config(config *toml.Tree) gzb.Bot {
 	return b
 }
 
+// zulip bot wants a call back function but we wont have an irc bot or user until later
+// so we'll generate a function that includes those in the scope
 func zulip_to_irc(bot *hbot.Bot, user string) func(gzb.EventMessage, error) {
 	var msgfunc = func(message string) { bot.Msg(user, message) }
 	return func(em gzb.EventMessage, err error) {
@@ -45,6 +48,7 @@ func zulip_to_irc(bot *hbot.Bot, user string) func(gzb.EventMessage, error) {
 	}
 }
 
+// callback for zulip events. interfaces with irc bot via function that sends message
 func zulip_recieve_message(irc_msg func(string), em gzb.EventMessage, err error) {
 	if err != nil {
 		log.Println("error in respond to message:", err)
@@ -65,6 +69,10 @@ func zulip_recieve_message(irc_msg func(string), em gzb.EventMessage, err error)
 
 	//em.Queue.Bot.Respond(em, "hi forever!")
 }
+
+//TODO: what does stream/topic look like? reactions?
+//TODO: capture mutliple emails for group DM
+var irc_to_z_patt = regexp.MustCompile(`^(?P<Email>[^@ ]+@[^/:]+)/?(?P<Topic>[^:]+})?:(?P<Msg>.*)`)
 
 func main() {
 	config_file := flag.String("config", "config.toml", "[zulip] and [irc] configuration")
@@ -105,11 +113,24 @@ func main() {
 	irc_user := config.Get("irc.user").(string)
 	var irc_recieved_message = hbot.Trigger{
 		Condition: func(b *hbot.Bot, m *hbot.Message) bool {
-			log.Println("message", m.Command)
 			return m.From == irc_user
 		},
 		Action: func(b *hbot.Bot, m *hbot.Message) bool {
-			b.Reply(m, "message received!")
+			matches := irc_to_z_patt.FindStringSubmatch(m.Content)
+			log.Println("message from irc:", m, "\n\tmatchs:", matches)
+			if len(matches) > 1 {
+				email := matches[irc_to_z_patt.SubexpIndex("Email")]
+				msg_text := matches[irc_to_z_patt.SubexpIndex("Msg")]
+				log.Println("to zulip email:", email, "\n\tmsg:", msg_text)
+				msg := gzb.Message{
+					Stream:  "",
+					Topic:   "",
+					Emails:  []string{email},
+					Content: msg_text}
+				zulip_bot.Message(msg)
+			} else {
+				b.Reply(m, fmt.Sprintf("don't know what to do with '%s'", m.Content))
+			}
 			return false
 		},
 	}
